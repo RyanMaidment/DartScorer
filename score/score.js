@@ -213,7 +213,15 @@ function afterRender() {
 }
 
 function topbar({ left = '', title = '', sub = '', mid = '', right = '' }) {
-  return `<header class="topbar">${left}<div class="title">${title}${sub ? `<small>${sub}</small>` : ''}</div>${mid}${right}</header>`;
+  return `<header class="topbar">${left}<div class="title">${title}${sub ? `<small>${sub}</small>` : ''}</div>${mid}${right}<button class="fullscreen-toggle" data-act="fullscreen" title="Toggle fullscreen (F)" aria-label="Toggle fullscreen"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 3v-3h2v5h-5v-2h3z"/></svg></button></header>`;
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  } else {
+    document.exitFullscreen?.();
+  }
 }
 
 function syncHtml() {
@@ -952,6 +960,7 @@ document.addEventListener('click', async (e) => {
     case 'open': return go(`#/match/${el.dataset.id}`);
     case 'stats': return go(`#/match/${el.dataset.id}/stats`);
     case 'back': return go('#/');
+    case 'fullscreen': return toggleFullscreen();
     case 'leg': S.viewLeg = parseInt(el.dataset.n, 10); S.entry = ''; S.override = null; return render();
     case 'key': return press(el.dataset.k);
     case 'quick': S.entry = el.dataset.v; return updateEntryDisplay();
@@ -1064,12 +1073,13 @@ async function handleModalAction(el) {
   }
 }
 
-// Physical keyboard support (laptops): digits, Backspace, Enter
+// Physical keyboard support (laptops): digits, Backspace, Enter, F for fullscreen
 document.addEventListener('keydown', (e) => {
   if ($('#modal').open) return;
   if (e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) {
     return;
   }
+  if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
   if (S.route.name !== 'match') return;
   if (/^[0-9]$/.test(e.key)) press(e.key);
   else if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
