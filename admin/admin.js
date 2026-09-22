@@ -434,17 +434,6 @@ function statsTab() {
 
   return `
     <div class="card">
-      <h2>View a saved week</h2>
-      <p class="hint">Pick any saved week — nights you've played live, or weeks imported from before switching to this app — to see that week's player stats.</p>
-      <div class="row"><div><label class="f">Week</label><select id="view-week-select">${weekSel}</select></div></div>
-      ${viewedWeek ? `<div class="table-scroll" style="margin-top:12px"><table>
-        <thead><tr><th class="num">Team</th><th>Player</th><th>G</th><th class="num">Games</th><th class="num">Points</th><th class="num">Shots</th><th class="num">Avg</th><th class="num">Fin</th><th class="num">HS</th><th class="num">HF</th><th class="num">100+/95+</th><th class="num">180/171</th></tr></thead>
-        <tbody>${(viewedWeek.rows || []).map((r) => `<tr><td class="num">${r.team}</td><td>${esc(r.player)}${r.spare ? ' <span class="pill">spare</span>' : ''}</td><td>${(r.gender || '')[0] || ''}</td>
-          <td class="num">${r.games}</td><td class="num">${r.points}</td><td class="num">${r.shots}</td><td class="num">${r.average == null ? '' : Number(r.average).toFixed(2)}</td>
-          <td class="num">${r.finishes}</td><td class="num">${r.highShot}</td><td class="num">${r.highFinish || ''}</td><td class="num">${r.tons}</td><td class="num">${r.maxes}</td></tr>`).join('')}</tbody></table></div>`
-        : '<p class="hint">No saved weeks yet.</p>'}
-    </div>
-    <div class="card">
       <h2>Save a night's stats</h2>
       <p class="hint">When the night is finished, save it. That stores the night's player stats and team points (the same columns as your "All Weeks" sheet) so they roll into the season totals.
         You can save again any time after a correction — it simply replaces that night's snapshot.</p>
@@ -457,6 +446,17 @@ function statsTab() {
       </div>
       ${reportPanel()}
       ${preview}
+    </div>
+    <div class="card">
+      <h2>View a saved week</h2>
+      <p class="hint">Pick any saved week — nights you've played live, or weeks imported from before switching to this app — to see that week's player stats.</p>
+      <div class="row"><div><label class="f">Week</label><select id="view-week-select">${weekSel}</select></div></div>
+      ${viewedWeek ? `<div class="table-scroll" style="margin-top:12px"><table>
+        <thead><tr><th class="num">Team</th><th>Player</th><th>G</th><th class="num">Games</th><th class="num">Points</th><th class="num">Shots</th><th class="num">Avg</th><th class="num">Fin</th><th class="num">HS</th><th class="num">HF</th><th class="num">100+/95+</th><th class="num">180/171</th></tr></thead>
+        <tbody>${(viewedWeek.rows || []).map((r) => `<tr><td class="num">${r.team}</td><td>${esc(r.player)}${r.spare ? ' <span class="pill">spare</span>' : ''}</td><td>${(r.gender || '')[0] || ''}</td>
+          <td class="num">${r.games}</td><td class="num">${r.points}</td><td class="num">${r.shots}</td><td class="num">${r.average == null ? '' : Number(r.average).toFixed(2)}</td>
+          <td class="num">${r.finishes}</td><td class="num">${r.highShot}</td><td class="num">${r.highFinish || ''}</td><td class="num">${r.tons}</td><td class="num">${r.maxes}</td></tr>`).join('')}</tbody></table></div>`
+        : '<p class="hint">No saved weeks yet.</p>'}
     </div>
     <div class="card">
       <h2>Season standings (saved weeks)</h2>
