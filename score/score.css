@@ -19,7 +19,7 @@
   --panel: rgba(255, 255, 255, 0.05);
   --panel-2: rgba(255, 255, 255, 0.09);
 
-  --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Space Mono', ui-monospace, monospace;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
