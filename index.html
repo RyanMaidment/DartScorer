@@ -2,102 +2,76 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thursday Night Dart League — Live Board</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dart Central</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wood: #0B0A14; --wood-2: #1A1030; --brass: #FFC933; --chalk: #FFFFFF; --chalk-dim: #C9D2EE;
+    --line: rgba(255, 201, 51, 0.32); --panel: rgba(255, 255, 255, 0.05);
+    --font-display: 'Big Shoulders Display', sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; color: var(--chalk); font-family: var(--font-body); }
+  body {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(255, 201, 51, 0.14), transparent 45%),
+      linear-gradient(180deg, var(--wood) 0%, var(--wood-2) 100%);
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 9vh 20px 40px; text-align: center; }
+  h1 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; font-size: clamp(30px, 5vw, 48px); margin: 0 0 8px; }
+  .tagline { color: var(--brass); text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; font-weight: 700; margin: 0 0 48px; }
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
+  @media (max-width: 620px) { .options { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 26px; display: flex; flex-direction: column; gap: 14px; }
+  .card h2 { font-family: var(--font-display); text-transform: uppercase; font-size: 22px; margin: 0; color: var(--brass); }
+  .card p { margin: 0; color: var(--chalk-dim); font-size: 14px; line-height: 1.55; flex: 1; }
+  .btn { display: block; text-align: center; text-decoration: none; border: 1px solid var(--line); background: var(--brass); color: #1a1200; font-weight: 800; padding: 12px 18px; border-radius: 8px; }
+  .btn.ghost { background: transparent; color: var(--chalk); font-weight: 600; border-color: var(--line); }
+  .btn.ghost:hover { background: rgba(255,255,255,0.08); }
+  .sub-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sub-row .btn { flex: 1; padding: 10px 8px; font-size: 14px; }
+</style>
 </head>
 <body>
-
-<div id="app">
-
-  <header class="site-header">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 100 100" width="100%" height="100%">
-          <circle cx="50" cy="50" r="47" fill="var(--chalk)"/>
-          <circle cx="50" cy="50" r="47" fill="none" stroke="var(--wood)" stroke-width="3"/>
-          <circle cx="50" cy="50" r="36" fill="var(--lose)"/>
-          <circle cx="50" cy="50" r="24" fill="var(--chalk)"/>
-          <circle cx="50" cy="50" r="12" fill="var(--lose)"/>
-          <circle cx="50" cy="50" r="4" fill="var(--chalk)"/>
-        </svg>
-      </span>
-      <div class="brand-text">
-        <h1 id="league-name">Thursday Night Dart League</h1>
-        <p class="tagline">Live Scoreboard</p>
+<div class="wrap">
+  <h1 id="site-title">Dart Central</h1>
+  <p class="tagline">Pick where you're headed</p>
+  <div class="options">
+    <div class="card">
+      <h2>&#127942; New Tournament</h2>
+      <p>Singles, doubles or triples — round-robin groups, then a knockout bracket. Runs completely separately from the league, start to finish.</p>
+      <a class="btn" href="tournament/admin/">Set up a tournament</a>
+    </div>
+    <div class="card">
+      <h2>&#127919; Current League</h2>
+      <p id="league-blurb">Your ongoing weekly league — manage nights, score matches, and show the live TV board.</p>
+      <div class="sub-row">
+        <a class="btn ghost" href="admin/">Admin</a>
+        <a class="btn ghost" href="score/">Scorer</a>
+        <a class="btn ghost" href="board/">TV board</a>
       </div>
     </div>
-    <div class="header-status">
-      <div class="clock" id="clock">--:--</div>
-      <div class="status" id="status">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="status-text">Connecting…</span>
-      </div>
-    </div>
-  </header>
-
-  <main class="board">
-
-    <section class="panel matchups" aria-labelledby="matchups-title">
-      <h2 id="matchups-title">Tonight&rsquo;s Matchups</h2>
-      <ol class="match-list" id="match-list"><!-- rendered by script.js --></ol>
-    </section>
-
-    <aside class="side-stack">
-
-      <section class="panel awards" aria-labelledby="awards-title">
-        <h2 id="awards-title">Top Players</h2>
-        <div class="award-row" id="award-row"><!-- rendered by script.js --></div>
-      </section>
-
-      <section class="panel leaderboards" aria-label="Top players">
-        <div class="leaderboard" id="men-board">
-          <h2>Men&rsquo;s Top 8</h2>
-          <div class="lb-head">
-            <span class="lb-rank"></span>
-            <span class="lb-name">Player</span>
-            <span class="lb-stat">Avg</span>
-            <span class="lb-stat">HS</span>
-          </div>
-          <ol class="lb-list" id="men-list"><!-- rendered by script.js --></ol>
-        </div>
-        <div class="leaderboard" id="women-board">
-          <h2>Women&rsquo;s Top 8</h2>
-          <div class="lb-head">
-            <span class="lb-rank"></span>
-            <span class="lb-name">Player</span>
-            <span class="lb-stat">Avg</span>
-            <span class="lb-stat">HS</span>
-          </div>
-          <ol class="lb-list" id="women-list"><!-- rendered by script.js --></ol>
-        </div>
-      </section>
-
-    </aside>
-
-  </main>
-
-  <footer class="ticker" aria-label="League news">
-    <div class="ticker-label">
-      <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path fill="currentColor" d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1zm13.5 1a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12z"/></svg>
-      News
-    </div>
-    <div class="ticker-viewport">
-      <div class="ticker-track" id="ticker-track"><!-- rendered by script.js --></div>
-    </div>
-  </footer>
-
-  <button id="fullscreen-toggle" class="fullscreen-toggle" title="Toggle fullscreen (F)" aria-label="Toggle fullscreen">
-    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 3v-3h2v5h-5v-2h3z"/></svg>
-  </button>
-
+  </div>
 </div>
 
-<script src="script.js"></script>
+<script type="module">
+  import { createStore } from './lib/store.js';
+  try {
+    const store = await createStore();
+    const cfg = await store.getConfig();
+    if (cfg && cfg.name) {
+      document.getElementById('site-title').textContent = cfg.name;
+      document.getElementById('league-blurb').textContent =
+        `${cfg.name} — manage nights, score matches, and show the live TV board.`;
+    }
+  } catch (err) {
+    console.warn('Could not load the league name, using defaults:', err);
+  }
+</script>
 </body>
 </html>
