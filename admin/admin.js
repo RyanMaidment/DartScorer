@@ -23,6 +23,7 @@ const S = {
   form: null,                 // "Tonight" form state
   draft: null,                // Settings form state
   statsNight: null, statsMatches: null,
+  viewWeekId: null,           // which saved week is shown in "View a saved week"
   dirty: new Set(),           // roster rows with unsaved edits
   showSpares: false,
   msg: {},
@@ -37,16 +38,7 @@ async function boot() {
   try { S.store = await createStore(); }
   catch (err) { $('#app').innerHTML = `<div class="center"><h2>Couldn't start</h2>${esc(err.message || err)}</div>`; return; }
   S.kind = S.store.kind;
-
-  if (S.kind === 'demo') {
-    // Demo mode has no real data to protect — leave it open so people can try the app.
-    S.auth = { ready: true, signedIn: true, role: 'admin' };
-  } else {
-    const { requireAdminLogin, mountSignOutButton } = await import('../lib/auth-gate.js');
-    await requireAdminLogin($('#app'));   // shows a password prompt and waits until it's right
-    mountSignOutButton();
-    S.auth = { ready: true, signedIn: true, role: 'admin' };
-  }
+  S.auth = { ready: true, signedIn: true, role: 'admin' };   // no login: the page is open
   start();
   render(true);
 }
@@ -370,6 +362,14 @@ function statsTab() {
   const nightSel = S.nights.slice().reverse().map((n) =>
     `<option value="${esc(n.id)}"${n.id === S.statsNight ? ' selected' : ''}>${esc(n.date)}${n.week ? ' · Week ' + esc(n.week) : ''}</option>`).join('');
 
+  // Every saved week, sorted by real calendar date (not doc id, since imported weeks
+  // like "legacy-summer-w1" won't sort correctly against real date-based night ids).
+  const weeksSorted = [...S.weekly].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (!S.viewWeekId && weeksSorted.length) S.viewWeekId = weeksSorted[weeksSorted.length - 1].id;
+  const viewedWeek = weeksSorted.find((w) => w.id === S.viewWeekId) || null;
+  const weekSel = weeksSorted.slice().reverse().map((w) =>
+    `<option value="${esc(w.id)}"${w.id === S.viewWeekId ? ' selected' : ''}>${esc(w.date)}${w.week ? ' · Week ' + esc(w.week) : ''}</option>`).join('');
+
   let preview = '<p class="hint">Create a night first.</p>';
   let saved = null;
   if (night && S.statsMatches) {
@@ -407,7 +407,43 @@ function statsTab() {
   }
   const standings = [...perTeam.entries()].sort((a, b) => b[1].win - a[1].win);
 
+  // Player stats from saved weeks (season-to-date, across every saved snapshot)
+  const perPlayer = new Map();
+  for (const w of S.weekly) {
+    for (const r of w.rows || []) {
+      const p = perPlayer.get(r.player) || {
+        player: r.player, gender: r.gender, spare: r.spare, team: r.team,
+        nights: 0, games: 0, points: 0, shots: 0, finishes: 0, highShot: 0, highFinish: 0, tons: 0, maxes: 0,
+      };
+      p.nights += 1;
+      p.games += r.games || 0;
+      p.points += r.points || 0;
+      p.shots += r.shots || 0;
+      p.finishes += r.finishes || 0;
+      p.highShot = Math.max(p.highShot, r.highShot || 0);
+      p.highFinish = Math.max(p.highFinish, r.highFinish || 0);
+      p.tons += r.tons || 0;
+      p.maxes += r.maxes || 0;
+      p.team = r.team; p.spare = r.spare;   // reflects the most recently saved week
+      perPlayer.set(r.player, p);
+    }
+  }
+  const playerStandings = [...perPlayer.values()]
+    .map((p) => ({ ...p, average: p.shots ? p.points / p.shots : null }))
+    .sort((a, b) => (b.average ?? -1) - (a.average ?? -1));
+
   return `
+    <div class="card">
+      <h2>View a saved week</h2>
+      <p class="hint">Pick any saved week — nights you've played live, or weeks imported from before switching to this app — to see that week's player stats.</p>
+      <div class="row"><div><label class="f">Week</label><select id="view-week-select">${weekSel}</select></div></div>
+      ${viewedWeek ? `<div class="table-scroll" style="margin-top:12px"><table>
+        <thead><tr><th class="num">Team</th><th>Player</th><th>G</th><th class="num">Games</th><th class="num">Points</th><th class="num">Shots</th><th class="num">Avg</th><th class="num">Fin</th><th class="num">HS</th><th class="num">HF</th><th class="num">100+/95+</th><th class="num">180/171</th></tr></thead>
+        <tbody>${(viewedWeek.rows || []).map((r) => `<tr><td class="num">${r.team}</td><td>${esc(r.player)}${r.spare ? ' <span class="pill">spare</span>' : ''}</td><td>${(r.gender || '')[0] || ''}</td>
+          <td class="num">${r.games}</td><td class="num">${r.points}</td><td class="num">${r.shots}</td><td class="num">${r.average == null ? '' : Number(r.average).toFixed(2)}</td>
+          <td class="num">${r.finishes}</td><td class="num">${r.highShot}</td><td class="num">${r.highFinish || ''}</td><td class="num">${r.tons}</td><td class="num">${r.maxes}</td></tr>`).join('')}</tbody></table></div>`
+        : '<p class="hint">No saved weeks yet.</p>'}
+    </div>
     <div class="card">
       <h2>Save a night's stats</h2>
       <p class="hint">When the night is finished, save it. That stores the night's player stats and team points (the same columns as your "All Weeks" sheet) so they roll into the season totals.
@@ -427,6 +463,14 @@ function statsTab() {
       ${standings.length ? `<table><thead><tr><th class="num">Rank</th><th class="num">Team</th><th>Team / players</th><th class="num">Nights</th><th class="num">Points</th><th class="num">Out of</th></tr></thead><tbody>
         ${standings.map(([t, v], i) => `<tr><td class="num">${i + 1}</td><td class="num">${t}</td><td>${esc(teamText(t))}</td><td class="num">${v.nights}</td><td class="num">${fmtPoints(v.win)}</td><td class="num">${fmtPoints(v.total)}</td></tr>`).join('')}
       </tbody></table>` : '<p class="hint">Standings appear after you save your first night.</p>'}
+    </div>
+    <div class="card">
+      <h2>Player stats (saved weeks)</h2>
+      <p class="hint">Season-to-date, combining every saved week — including any you imported from before switching to this app.</p>
+      ${playerStandings.length ? `<div class="table-scroll"><table>
+        <thead><tr><th class="num">Rank</th><th>Player</th><th class="num">Team</th><th class="num">Nights</th><th class="num">Games</th><th class="num">Avg</th><th class="num">HS</th><th class="num">HF</th><th class="num">Fin</th><th class="num">100+/95+</th><th class="num">180/171</th></tr></thead><tbody>
+        ${playerStandings.map((p, i) => `<tr><td class="num">${i + 1}</td><td>${esc(p.player)}${p.spare ? ' <span class="pill">spare</span>' : ''}</td><td class="num">${p.team}</td><td class="num">${p.nights}</td><td class="num">${p.games}</td><td class="num">${p.average === null ? '' : p.average.toFixed(2)}</td><td class="num">${p.highShot}</td><td class="num">${p.highFinish || ''}</td><td class="num">${p.finishes}</td><td class="num">${p.tons}</td><td class="num">${p.maxes}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="hint">Player stats appear after you save your first night.</p>'}
     </div>`;
 }
 
@@ -539,6 +583,7 @@ document.addEventListener('change', (e) => {
   if (t.id === 'f-current') S.form.makeCurrent = t.checked;
   if (t.id === 'show-spares') { S.showSpares = t.checked; render(true); }
   if (t.id === 'stats-night') { watchStatsNight(t.value); render(true); }
+  if (t.id === 'view-week-select') { S.viewWeekId = t.value; render(true); }
   if (t.dataset && t.dataset.f === 'spare') {
     const tr = t.closest('tr');
     tr.querySelector('[data-f="team"]').disabled = t.checked;
