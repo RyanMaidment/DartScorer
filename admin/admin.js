@@ -37,7 +37,16 @@ async function boot() {
   try { S.store = await createStore(); }
   catch (err) { $('#app').innerHTML = `<div class="center"><h2>Couldn't start</h2>${esc(err.message || err)}</div>`; return; }
   S.kind = S.store.kind;
-  S.auth = { ready: true, signedIn: true, role: 'admin' };   // no login: the page is open
+
+  if (S.kind === 'demo') {
+    // Demo mode has no real data to protect — leave it open so people can try the app.
+    S.auth = { ready: true, signedIn: true, role: 'admin' };
+  } else {
+    const { requireAdminLogin, mountSignOutButton } = await import('../lib/auth-gate.js');
+    await requireAdminLogin($('#app'));   // shows a password prompt and waits until it's right
+    mountSignOutButton();
+    S.auth = { ready: true, signedIn: true, role: 'admin' };
+  }
   start();
   render(true);
 }
