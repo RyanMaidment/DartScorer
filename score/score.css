@@ -179,6 +179,35 @@ select.sel, input.txt {
 .seg button.on { background: var(--brass); color: #1a1200; }
 .seg button.on.b { background: var(--side-b); color: #001a2a; }
 
+/* ------------------------------------------------------------- stats view -- */
+
+.stats-view { width: 100%; max-width: 900px; margin: 0 auto; padding: 16px 14px 40px; overflow-y: auto; }
+
+.stats-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 44px;
+  margin-bottom: 18px;
+}
+.stats-score-div { font-size: 22px; color: var(--brass-dim); }
+
+.stats-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.stats-col { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.stats-col.a { border-top: 4px solid var(--side-a); }
+.stats-col.b { border-top: 4px solid var(--side-b); }
+.stats-col h3 { margin: 0 0 10px; font-family: var(--font-display); text-transform: uppercase; font-size: 20px; }
+
+.stats-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats-table th { text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--chalk-dim); padding: 0 6px 6px; border-bottom: 1px solid var(--line); }
+.stats-table td { padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.stats-table th.num, .stats-table td.num { text-align: right; font-family: var(--font-mono); }
+.stats-table .stat-name { display: flex; align-items: baseline; gap: 6px; }
+.stats-table .stat-name .badges { font-size: 0.8em; }
+
 /* ----------------------------------------------------------- match screen -- */
 
 .legbar { display: flex; gap: 6px; align-items: center; }
@@ -327,11 +356,10 @@ dialog#modal label { display: block; font-size: 12px; letter-spacing: 0.08em; te
 }
 @media (max-width: 640px) {
   .topbar { flex-wrap: wrap; }
-  .setup-cols { grid-template-columns: 1fr; }
+  .setup-cols, .stats-cols { grid-template-columns: 1fr; }
   .match-card { grid-template-columns: 1fr; }
   .match-card .mt.b { flex-direction: row; text-align: left; }
 }
-
 
 /* ==========================================================================
    Phones
