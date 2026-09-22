@@ -3,7 +3,7 @@
   --wood: #0B0A14; --wood-2: #1A1030; --brass: #FFC933; --chalk: #FFFFFF; --chalk-dim: #C9D2EE;
   --win: #2BEF9A; --lose: #FF4D6D; --line: rgba(255, 201, 51, 0.32);
   --panel: rgba(255, 255, 255, 0.05); --panel-2: rgba(255, 255, 255, 0.09);
-  --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Space Mono', ui-monospace, monospace;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: dark;
