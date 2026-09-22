@@ -459,13 +459,13 @@ function statsTab() {
         : '<p class="hint">No saved weeks yet.</p>'}
     </div>
     <div class="card">
-      <h2>Season standings (saved weeks)</h2>
+      <h2>Season standings (Season-to-date)</h2>
       ${standings.length ? `<table><thead><tr><th class="num">Rank</th><th class="num">Team</th><th>Team / players</th><th class="num">Nights</th><th class="num">Points</th><th class="num">Out of</th></tr></thead><tbody>
         ${standings.map(([t, v], i) => `<tr><td class="num">${i + 1}</td><td class="num">${t}</td><td>${esc(teamText(t))}</td><td class="num">${v.nights}</td><td class="num">${fmtPoints(v.win)}</td><td class="num">${fmtPoints(v.total)}</td></tr>`).join('')}
       </tbody></table>` : '<p class="hint">Standings appear after you save your first night.</p>'}
     </div>
     <div class="card">
-      <h2>Player stats (saved weeks)</h2>
+      <h2>Player stats (Season-to-date)</h2>
       <p class="hint">Season-to-date, combining every saved week — including any you imported from before switching to this app.</p>
       ${playerStandings.length ? `<div class="table-scroll"><table>
         <thead><tr><th class="num">Rank</th><th>Player</th><th class="num">Team</th><th class="num">Nights</th><th class="num">Games</th><th class="num">Avg</th><th class="num">HS</th><th class="num">HF</th><th class="num">Fin</th><th class="num">100+/95+</th><th class="num">180/171</th></tr></thead><tbody>
