@@ -102,26 +102,6 @@ async function loadFallback() {
   }
 }
 
-function setStatus(mode) {
-  const dot = document.getElementById('status-dot');
-  const text = document.getElementById('status-text');
-  dot.classList.remove('live', 'stale');
-  const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (mode === 'live') {
-    dot.classList.add('live');
-    text.textContent = `Live — updated ${stamp}`;
-  } else if (mode === 'demo') {
-    dot.classList.add('live');
-    text.textContent = 'DEMO MODE — data stored in this browser only';
-  } else if (mode === 'cache') {
-    dot.classList.add('stale');
-    text.textContent = 'Offline — showing last known scores';
-  } else {
-    dot.classList.add('stale');
-    text.textContent = 'Could not reach the league database — showing last known scores';
-  }
-}
-
 /* --------------------------------------------------------------- render -- */
 
 function render(data) {
