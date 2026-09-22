@@ -9,7 +9,7 @@
 import { createStore } from '../lib/store.js';
 import {
   withRules, matchState, legState, starterFor, lineupFor, nextPlayer, lastThrower,
-  classifyEntry, replaySide, fmtPoints, legOwed,
+  classifyEntry, replaySide, fmtPoints, legOwed, playerStats,
 } from '../lib/engine.js';
 import { teamLabel, lineupChoices, customTeamName, teamTitle } from '../lib/night.js';
 
@@ -101,8 +101,9 @@ function watchNight(id) {
 /* ================================================================ routing == */
 
 function readHash() {
+  const s = location.hash.match(/^#\/match\/([\w-]+)\/stats/);
   const m = location.hash.match(/^#\/match\/([\w-]+)/);
-  const next = m ? { name: 'match', id: m[1] } : { name: 'list', id: null };
+  const next = s ? { name: 'stats', id: s[1] } : (m ? { name: 'match', id: m[1] } : { name: 'list', id: null });
   if (next.name !== S.route.name || next.id !== S.route.id) {
     S.viewLeg = null; S.entry = ''; S.override = null;
   }
@@ -197,6 +198,12 @@ function render() {
   if (S.route.name === 'match') {
     const m = findMatch(S.route.id);
     if (m) { app.innerHTML = matchView(m); afterRender(); return; }
+  }
+  if (S.route.name === 'stats') {
+    const m = findMatch(S.route.id);
+    // If someone opens a stats link for a match that got reopened since, show the live match instead.
+    if (m && m.status !== 'final') { app.innerHTML = matchView(m); afterRender(); return; }
+    if (m) { app.innerHTML = statsView(m); return; }
   }
   app.innerHTML = listView();
 }
@@ -356,7 +363,7 @@ function matchView(m) {
     left: '<button class="btn small ghost" data-act="back">‹ Matches</button>',
     title: `Match ${matchNo(m)}<small>${esc(tt(m.teamA))} v ${esc(tt(m.teamB))}${S.night && S.night.week ? ` · Week ${esc(S.night.week)}` : ''}</small>`,
     mid: `<div class="legbar">${legChips}</div>`,
-    right: syncHtml(),
+    right: (m.status === 'final' ? `<button class="btn small" data-act="stats" data-id="${esc(m.id)}">Stats</button>` : '') + syncHtml(),
   });
 
   return bar + `<div class="match-grid">
@@ -518,6 +525,61 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
     ${starterRow}
     <div class="pad-actions">${undoBtn}${turnsBtn}${moreBtn}</div>
   </section>`;
+}
+
+/* ------------------------------------------------------------ match stats -- */
+
+function statsBadges(r, R) {
+  const out = [];
+  if (r.maxes > 0) out.push('\u{1F48E}');          // 💎  180 / 171
+  else if (r.tons > 0) out.push('\u{1F4AF}');      // 💯  100+ (men) / 95+ (women)
+  if (r.highFinish >= R.finishBadge) out.push('\u{1F3AF}');   // 🎯  big finish
+  return out.join('');
+}
+
+function statsTable(rows, R) {
+  if (!rows.length) return '<p class="hint">No throws recorded.</p>';
+  const body = rows.map((r) => `
+    <tr>
+      <td><span class="stat-name">${esc(r.short || r.name)}<span class="badges">${statsBadges(r, R)}</span></span></td>
+      <td class="num">${r.avg === null ? '—' : (Number.isInteger(r.avg) ? r.avg : r.avg.toFixed(1))}</td>
+      <td class="num">${r.highShot || 0}</td>
+      <td class="num">${r.highFinish || '—'}</td>
+      <td class="num">${r.finishes || 0}</td>
+    </tr>`).join('');
+  return `<table class="stats-table">
+    <thead><tr><th>Player</th><th class="num">Avg</th><th class="num">HS</th><th class="num">HF</th><th class="num">Fin</th></tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
+function statsView(m) {
+  const R = rules();
+  const ms = matchState(m, R);
+  const stats = playerStats([m], S.byId, R);   // scoped to just this match
+  const rowsFor = (teamNum) => [...stats.values()]
+    .filter((r) => r.team === teamNum && r.shots > 0)
+    .sort((a, b) => b.points - a.points);
+  const aRows = rowsFor(m.teamA);
+  const bRows = rowsFor(m.teamB);
+
+  const bar = topbar({
+    left: '<button class="btn small ghost" data-act="back">‹ Matches</button>',
+    title: `Match ${matchNo(m)} · Final<small>${esc(tt(m.teamA))} v ${esc(tt(m.teamB))}</small>`,
+    right: syncHtml(),
+  });
+
+  return bar + `
+    <div class="stats-view">
+      <div class="stats-score">
+        <span>${fmtPoints(ms.a)}</span><span class="stats-score-div">:</span><span>${fmtPoints(ms.b)}</span>
+      </div>
+      <div class="stats-cols">
+        <div class="stats-col a"><h3>${esc(tt(m.teamA))}</h3>${statsTable(aRows, R)}</div>
+        <div class="stats-col b"><h3>${esc(tt(m.teamB))}</h3>${statsTable(bRows, R)}</div>
+      </div>
+      <button class="btn primary" style="width:100%;font-size:18px;margin-top:16px" data-act="back">Done</button>
+    </div>`;
 }
 
 /* ================================================================== keypad == */
@@ -888,6 +950,7 @@ document.addEventListener('click', async (e) => {
 
   switch (act) {
     case 'open': return go(`#/match/${el.dataset.id}`);
+    case 'stats': return go(`#/match/${el.dataset.id}/stats`);
     case 'back': return go('#/');
     case 'leg': S.viewLeg = parseInt(el.dataset.n, 10); S.entry = ''; S.override = null; return render();
     case 'key': return press(el.dataset.k);
@@ -929,7 +992,7 @@ document.addEventListener('click', async (e) => {
       if (!ctx) return;
       await S.store.setMatchFields(S.nightId, ctx.m.id, { status: 'final' });
       toast('Match saved as final', 'good');
-      return go('#/');
+      return go(`#/match/${ctx.m.id}/stats`);
     }
   }
 });
@@ -986,7 +1049,7 @@ async function handleModalAction(el) {
     }
     case 'names-save': return saveTeamNamesModal();
     case 'end-match':
-      if (ctx) { await S.store.setMatchFields(S.nightId, ctx.m.id, { status: 'final' }); closeModal(true); go('#/'); }
+      if (ctx) { await S.store.setMatchFields(S.nightId, ctx.m.id, { status: 'final' }); closeModal(true); go(`#/match/${ctx.m.id}/stats`); }
       return;
     case 'reopen':
       if (ctx) { await S.store.setMatchFields(S.nightId, ctx.m.id, { status: 'live' }); closeModal(true); }
