@@ -19,7 +19,7 @@
   --panel: rgba(255, 255, 255, 0.05);
   --panel-2: rgba(255, 255, 255, 0.09);
 
-  --font-display: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
   --font-mono: 'Space Mono', ui-monospace, monospace;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -95,6 +95,27 @@ input, select { font-family: inherit; }
 .sync.off i { background: var(--lose); }
 .sync.saving i { background: var(--brass); }
 .demo-flag { background: var(--lose); color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; }
+
+.fullscreen-toggle {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--chalk-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+.fullscreen-toggle:hover,
+.fullscreen-toggle:focus-visible {
+  opacity: 1;
+  color: var(--brass);
+}
 
 .btn {
   border: 1px solid var(--line);
