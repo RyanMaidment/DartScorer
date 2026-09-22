@@ -183,7 +183,7 @@ function groupsSection() {
       const nameB = (entriesById[tie.entryB] || {}).name || '?';
       const status = complete ? `<b>${a}\u2013${b}</b> final` : started ? `${a}\u2013${b} in progress` : 'not started';
       return `<tr><td>${esc(nameA)}</td><td class="num">v</td><td>${esc(nameB)}</td>
-        <td style="text-align:right;white-space:nowrap">${status} <a class="btn small" href="../score/#/tie/${esc(tie.id)}">Score</a></td></tr>`;
+        <td style="text-align:right;white-space:nowrap">${status} <a class="btn small" href="../score/#/t/${esc(t.id)}/tie/${esc(tie.id)}">Score</a></td></tr>`;
     }).join('');
     return `
       <div class="card">
@@ -231,7 +231,7 @@ function bracketSection() {
       if (!tie.entryA || !tie.entryB) return `<div class="bracket-tie pending"><div>?</div><div class="vs">v</div><div>?</div></div>`;
       const live = tie.tieId ? tiesById[tie.tieId] : null;
       const { a, b, complete } = live ? tieLegsWon(live, R) : { a: 0, b: 0, complete: false };
-      const scoreLink = tie.tieId ? `<a class="btn small" href="../score/#/tie/${esc(tie.tieId)}">Score</a>` : '';
+      const scoreLink = tie.tieId ? `<a class="btn small" href="../score/#/t/${esc(t.id)}/tie/${esc(tie.tieId)}">Score</a>` : '';
       const declare = !tie.winner ? `
         <div class="row">
           <button class="btn small" data-act="declare-winner" data-round="${round.round}" data-slot="${tie.slot}" data-entry="${esc(tie.entryA)}">${esc(nameOf(tie.entryA))} won</button>
