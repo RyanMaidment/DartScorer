@@ -259,15 +259,17 @@ function padPanel(tie, n, leg, st, ms, R) {
   return `<section class="pad">
     <div class="entry-box">
       <div class="who">${who}</div>
-      <div class="val ${S.entry === '' ? 'empty' : ''}" id="entry-val">${S.entry === '' ? '0' : esc(S.entry)}</div>
+      ${S.entry.includes('+') ? `<div class="calc-expr">${esc(S.entry.split('+').join(' + '))}</div>` : ''}
+      <div class="val ${S.entry === '' ? 'empty' : ''}" id="entry-val">${entryTotalDisplay()}</div>
     </div>
     <div class="quick">${QUICK_SCORES.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}</div>
     <div class="keys">
       ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map((d) => `<button data-act="key" data-k="${d}">${d}</button>`).join('')}
       <button class="back" data-act="key" data-k="back" aria-label="Backspace">\u232b</button>
       <button data-act="key" data-k="0">0</button>
-      <button class="enter" data-act="enter">Enter \u2713</button>
+      <button class="plus" data-act="key" data-k="plus" aria-label="Add another dart">+</button>
     </div>
+    <button class="enter-big" data-act="enter">Enter \u2713</button>
     ${starterRow}
     <div class="pad-actions">${undoBtn}</div>
   </section>`;
@@ -286,53 +288,89 @@ function entryContext() {
   return { tie: S.tie, R, ms, n, leg, st, thrower };
 }
 
+/** Turns "57+3+19" (or a plain "79") into 79. Returns null for an empty/incomplete entry. */
+function totalOf(str) {
+  if (str === '' || str.endsWith('+')) return null;
+  return str.split('+').reduce((sum, seg) => sum + (parseInt(seg, 10) || 0), 0);
+}
+
+/** What the big number in the entry box should show right now. */
+function entryTotalDisplay() {
+  if (S.entry === '') return '0';
+  const t = totalOf(S.entry);
+  return t === null ? esc(S.entry) : t;   // still typing after a trailing "+": show the raw string, not a wrong total
+}
+
 function updateEntryDisplay() {
   const el = $('#entry-val');
   if (!el) return;
-  el.textContent = S.entry === '' ? '0' : S.entry;
+  el.textContent = entryTotalDisplay();
   el.classList.toggle('empty', S.entry === '');
 }
 
 function press(k) {
   const ctx = entryContext();
   if (!ctx || !ctx.thrower) return;
-  if (k === 'back') { S.entry = S.entry.slice(0, -1); }
-  else if (/^\d$/.test(k)) {
-    const next = (S.entry === '0' ? '' : S.entry) + k;
-    if (next.length > 3) return;
-    if (parseInt(next, 10) > 180) { toast('The highest possible score is 180', 'error'); return; }
-    S.entry = next;
+  if (k === 'back') {
+    S.entry = S.entry.slice(0, -1);
+  } else if (k === 'plus') {
+    // Calculator entry: "57+3+19" adds up to a single turn total, one number per dart.
+    if (!S.entry || S.entry.endsWith('+')) return;
+    S.entry += '+';
+  } else if (/^\d$/.test(k)) {
+    const hasPlus = S.entry.includes('+');
+    const lastPlus = S.entry.lastIndexOf('+');
+    const before = hasPlus ? S.entry.slice(0, lastPlus + 1) : '';
+    const seg = hasPlus ? S.entry.slice(lastPlus + 1) : S.entry;
+    // Before any "+": a normal 3-dart total (max 180). After a "+": one dart's value (max 60).
+    const maxLen = hasPlus ? 2 : 3;
+    const maxVal = hasPlus ? 60 : 180;
+    const nextSeg = (seg === '0' ? '' : seg) + k;
+    if (nextSeg.length > maxLen) return;
+    if (parseInt(nextSeg, 10) > maxVal) {
+      toast(hasPlus ? 'A single dart can score at most 60' : 'The highest possible score is 180', 'error');
+      return;
+    }
+    S.entry = before + nextSeg;
   }
   updateEntryDisplay();
 }
 
+let submitting = false;
 async function enterScore() {
   const ctx = entryContext();
   if (!ctx || !ctx.thrower) return;
-  const { n, st, thrower } = ctx;
-  if (S.entry === '') { toast('Type the score first (0 if they missed)', 'error'); return; }
-  const s = parseInt(S.entry, 10);
-  const rem = st[thrower.side].remaining;
-  const c = classifyEntry(rem, s);
+  if (submitting) return;
+  submitting = true;
+  try {
+    const { n, st, thrower } = ctx;
+    if (S.entry === '') { toast('Type the score first (0 if they missed)', 'error'); return; }
+    if (S.entry.endsWith('+')) { toast('Finish typing that last dart first', 'error'); return; }
+    const s = totalOf(S.entry);
+    const rem = st[thrower.side].remaining;
+    const c = classifyEntry(rem, s);
 
-  if (c.kind === 'invalid') { toast(c.reason, 'error'); return; }
-  if (c.kind === 'bust') {
-    await commitTurn(ctx, thrower, 0, true);
-    toast(`Bust \u2014 ${c.reason}. Recorded 0.`, 'error');
-    return;
-  }
-  if (c.kind === 'finish') {
-    const ok = await confirmModal({
-      title: 'Finished the leg?',
-      text: `${thrower.pid} checks out on ${s}. Was it a double?`,
-      yes: `Yes, finished on ${s}`, no: 'No \u2014 fix score',
-    });
-    if (!ok) return;
+    if (c.kind === 'invalid') { toast(c.reason, 'error'); return; }
+    if (c.kind === 'bust') {
+      await commitTurn(ctx, thrower, 0, true);
+      toast(`Bust \u2014 ${c.reason}. Recorded 0.`, 'error');
+      return;
+    }
+    if (c.kind === 'finish') {
+      const ok = await confirmModal({
+        title: 'Finished the leg?',
+        text: `${thrower.pid} checks out on ${s}. Was it a double?`,
+        yes: `Yes, finished on ${s}`, no: 'No \u2014 fix score',
+      });
+      if (!ok) return;
+      await commitTurn(ctx, thrower, s, false);
+      toast(`Leg ${n} finished! \u{1F3AF}`, 'good');
+      return;
+    }
     await commitTurn(ctx, thrower, s, false);
-    toast(`Leg ${n} finished! \u{1F3AF}`, 'good');
-    return;
+  } finally {
+    submitting = false;
   }
-  await commitTurn(ctx, thrower, s, false);
 }
 
 async function commitTurn(ctx, thrower, s, bust) {
@@ -473,5 +511,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
   if (/^[0-9]$/.test(e.key)) press(e.key);
   else if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
+  else if (e.key === '+') { e.preventDefault(); press('plus'); }
   else if (e.key === 'Enter') { e.preventDefault(); enterScore(); }
 });
