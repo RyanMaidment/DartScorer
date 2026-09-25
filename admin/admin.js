@@ -125,6 +125,7 @@ function initForms() {
       news: (S.config.news || []).join('\n'),
       legsPerMatch: R.legsPerMatch, finishPoints: R.finishPoints, under100Points: R.under100Points,
       tonM: R.tonThreshold.M, tonF: R.tonThreshold.F, finishBadge: R.finishBadge,
+      avgExcludesUnder100: !!R.avgExcludesUnder100,
     };
   }
 }
@@ -347,7 +348,12 @@ async function saveTeamNames() {
 function watchStatsNight(id) {
   if (unsubStats) { unsubStats(); unsubStats = null; }
   S.statsNight = id; S.statsMatches = null;
-  if (id) unsubStats = S.store.onMatches(id, (m) => { S.statsMatches = m; if (S.tab === 'stats') render(); });
+  // force: true — nothing on this tab is a text field mid-edit, so it's always safe to redraw
+  // the instant new match data arrives. Without this, the preview table can get stuck showing
+  // an old snapshot (e.g. from before a correction) even though the underlying data has since
+  // updated — a CSV download, which reads fresh at click time, would show the current numbers
+  // while the on-screen table sits frozen on the stale ones.
+  if (id) unsubStats = S.store.onMatches(id, (m) => { S.statsMatches = m; if (S.tab === 'stats') render(true); });
 }
 
 function statsTab() {
@@ -459,13 +465,13 @@ function statsTab() {
         : '<p class="hint">No saved weeks yet.</p>'}
     </div>
     <div class="card">
-      <h2>Season standings (Season-to-date)</h2>
+      <h2>Season standings (saved weeks)</h2>
       ${standings.length ? `<table><thead><tr><th class="num">Rank</th><th class="num">Team</th><th>Team / players</th><th class="num">Nights</th><th class="num">Points</th><th class="num">Out of</th></tr></thead><tbody>
         ${standings.map(([t, v], i) => `<tr><td class="num">${i + 1}</td><td class="num">${t}</td><td>${esc(teamText(t))}</td><td class="num">${v.nights}</td><td class="num">${fmtPoints(v.win)}</td><td class="num">${fmtPoints(v.total)}</td></tr>`).join('')}
       </tbody></table>` : '<p class="hint">Standings appear after you save your first night.</p>'}
     </div>
     <div class="card">
-      <h2>Player stats (Season-to-date)</h2>
+      <h2>Player stats (saved weeks)</h2>
       <p class="hint">Season-to-date, combining every saved week — including any you imported from before switching to this app.</p>
       ${playerStandings.length ? `<div class="table-scroll"><table>
         <thead><tr><th class="num">Rank</th><th>Player</th><th class="num">Team</th><th class="num">Nights</th><th class="num">Games</th><th class="num">Avg</th><th class="num">HS</th><th class="num">HF</th><th class="num">Fin</th><th class="num">100+/95+</th><th class="num">180/171</th></tr></thead><tbody>
@@ -541,6 +547,11 @@ function settingsTab() {
         ${num('s-tonf', 'Women: 95+ counts from', d.tonF)}
         ${num('s-badge', 'Big-finish badge from', d.finishBadge)}
       </div>
+      <div class="row" style="align-items:center;margin-top:2px">
+        <label><input type="checkbox" id="s-avgunder100" ${d.avgExcludesUnder100 ? 'checked' : ''}>
+          Stop counting shots toward average once a player is under 100 remaining</label>
+      </div>
+      <p class="hint" style="margin-top:6px">Some leagues only count "big scoring" turns toward average, treating anything thrown while chasing a finish under 100 as separate. Games, Points, Shots, Finishes and High Shot/Finish are never affected — only Average.</p>
       <button class="btn primary" data-act="save-settings">Save settings</button>
       ${S.kind === 'demo' ? '<button class="btn danger" data-act="reset-demo" style="margin-left:10px">Reset demo data</button>' : ''}
     </div>`;
@@ -555,6 +566,7 @@ async function saveSettings() {
     under100Points: parseFloat(v('#s-u100')) || 0,
     tonThreshold: { M: parseInt(v('#s-tonm'), 10) || 100, F: parseInt(v('#s-tonf'), 10) || 95 },
     finishBadge: parseInt(v('#s-badge'), 10) || 95,
+    avgExcludesUnder100: $('#s-avgunder100').checked,
   };
   const news = v('#s-news').split('\n').map((s) => s.trim()).filter(Boolean);
   await S.store.saveConfig({ name: v('#s-name').trim() || 'Dart League', news, rules });
@@ -571,6 +583,7 @@ document.addEventListener('input', (e) => {
   if (S.tab === 'settings' && S.draft) {
     const map = { 's-name': 'name', 's-news': 'news', 's-legs': 'legsPerMatch', 's-fin': 'finishPoints', 's-u100': 'under100Points', 's-tonm': 'tonM', 's-tonf': 'tonF', 's-badge': 'finishBadge' };
     if (map[t.id]) S.draft[map[t.id]] = t.value;
+    if (t.id === 's-avgunder100') S.draft.avgExcludesUnder100 = t.checked;
   }
   if (t.id === 'f-date') S.form.date = t.value;
   if (t.id === 'f-week') S.form.week = t.value;
