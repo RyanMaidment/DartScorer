@@ -17,9 +17,9 @@ const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const keyOf = (side) => (side === 'A' ? 'a' : 'b');
 
-const QUICK_SCORES = [26, 41, 45, 60, 100, 180];
-const LEFT_QUICK = QUICK_SCORES.slice(0, 3);    // 26, 41, 45 — flank the left side of the keypad
-const RIGHT_QUICK = QUICK_SCORES.slice(3);      // 60, 100, 180 — flank the right side
+const LEFT_QUICK = [26, 40, 41, 43];     // flank the left side of the keypad
+const RIGHT_QUICK = [45, 60, 81, 85];    // flank the right side
+const BOTTOM_QUICK = [100, 180, 140];    // the grid's bottom row when nothing's typed yet
 
 const S = {
   store: null,
@@ -460,11 +460,13 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
     </section>`;
 }
 
+const SETTINGS_ICON = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>';
+
 function padPanel(m, n, leg, st, ms, R, role = 'both') {
   const myShots = role === 'both' ? st.A.shots + st.B.shots : st[role].shots;
   const canUndo = myShots > 0;
   const undoBtn = `<button class="btn" data-act="undo" ${canUndo ? '' : 'disabled'}>↶ Undo<span class="long"> last turn</span></button>`;
-  const moreBtn = '<button class="btn ghost" data-act="more">More…</button>';
+  const moreBtn = `<button class="icon-btn" data-act="more" title="Settings" aria-label="Settings">${SETTINGS_ICON}</button>`;
   const turnsBtn = '<button class="btn phone-only" data-act="turns">Turns</button>';
   const t = currentThrower(m, n, leg, st, role);
 
@@ -503,14 +505,6 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
   /* Keypad */
   const tn = t.side === 'A' ? m.teamA : m.teamB;
   const rem = st[t.side].remaining;
-  const noTurns = st.A.shots + st.B.shots === 0;
-  const starter = starterFor(m, n);
-  const starterRow = noTurns ? `
-    <div class="starter-row">Leg ${n} starts:
-      <div class="seg">
-        <button class="${starter === 'A' ? 'on' : ''}" data-act="set-starter" data-side="A">${esc(tt(m.teamA))}</button>
-        <button class="${starter === 'B' ? 'on b' : ''}" data-act="set-starter" data-side="B">${esc(tt(m.teamB))}</button>
-      </div></div>` : '';
 
   let who;
   if (role !== 'both' && st.over) {
@@ -523,12 +517,26 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
     who = `${esc(tt(tn))} · <b>${esc(shortOf(t.pid))}</b> to throw · ${rem} left`;
   }
 
+  // The bottom-left button doubles up: undo a committed turn while nothing's typed,
+  // or back out what's currently being typed once something is — never both at once.
+  const leftBtn = S.entry === ''
+    ? `<button class="btn small ghost" data-act="undo" ${canUndo ? '' : 'disabled'}>Undo</button>`
+    : '<button class="btn small ghost" data-act="key" data-k="back">⌫ Back</button>';
+
+  // The grid's bottom row doubles up too: the three most common exact scores when the
+  // entry is empty, or the calculator operators once you've started typing.
+  const bottomRow = S.entry === ''
+    ? BOTTOM_QUICK.map((q) => `<button class="quick-bottom" data-act="quick" data-v="${q}">${q}</button>`).join('')
+    : `<button class="times" data-act="key" data-k="times" aria-label="Multiply (e.g. 20 for treble 20)">\u00d7</button>
+       <button data-act="key" data-k="0">0</button>
+       <button class="plus" data-act="key" data-k="plus" aria-label="Add another dart">+</button>`;
+
   return `<section class="pad">
     <div class="pchips phone-only">${t.lineup.map((id) => `<button class="pchip ${id === t.pid ? 'sel' : ''}" data-act="pick" data-p="${esc(id)}">${esc(shortOf(id))}</button>`).join('')}</div>
     <div class="entry-box">
       <div class="who">${who}</div>
       <div class="entry-row">
-        <button class="btn small ghost" data-act="undo" ${canUndo ? '' : 'disabled'}>Undo</button>
+        ${leftBtn}
         <div class="val ${S.entry === '' ? 'empty' : ''}" id="entry-val">${entryTotalDisplay()}</div>
         ${S.entry === ''
           ? '<button class="miss-enter-btn miss" data-act="miss">Miss</button>'
@@ -537,19 +545,13 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
       ${(S.entry.includes('+') || S.entry.includes('x')) ? `<div class="calc-expr">${esc(S.entry.split('+').join(' + ').split('x').join(' \u00d7 '))}</div>` : ''}
     </div>
     <div class="keypad-flanked">
-      <div class="flank">
-        ${LEFT_QUICK.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}
-        <button class="flank-back" data-act="key" data-k="back" aria-label="Backspace">⌫</button>
-      </div>
+      <div class="flank">${LEFT_QUICK.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}</div>
       <div class="keys">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<button data-act="key" data-k="${d}">${d}</button>`).join('')}
-        <button class="times" data-act="key" data-k="times" aria-label="Multiply (e.g. 20 for treble 20)">\u00d7</button>
-        <button data-act="key" data-k="0">0</button>
-        <button class="plus" data-act="key" data-k="plus" aria-label="Add another dart">+</button>
+        ${bottomRow}
       </div>
       <div class="flank">${RIGHT_QUICK.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}</div>
     </div>
-    ${starterRow}
     <div class="pad-actions">${turnsBtn}${moreBtn}</div>
   </section>`;
 }
@@ -697,7 +699,7 @@ function press(k) {
       S.entry = before + nextSeg;
     }
   }
-  updateEntryDisplay();
+  render();
 }
 
 let submitting = false;
@@ -1048,7 +1050,7 @@ document.addEventListener('click', async (e) => {
     case 'fullscreen': return toggleFullscreen();
     case 'leg': S.viewLeg = parseInt(el.dataset.n, 10); S.entry = ''; S.override = null; return render();
     case 'key': return press(el.dataset.k);
-    case 'quick': S.entry = el.dataset.v; return updateEntryDisplay();
+    case 'quick': S.entry = el.dataset.v; return render();
     case 'miss': S.entry = '0'; return enterScore();
     case 'enter': return enterScore();
     case 'undo': return undoLast();
