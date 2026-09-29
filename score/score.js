@@ -18,6 +18,8 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const keyOf = (side) => (side === 'A' ? 'a' : 'b');
 
 const QUICK_SCORES = [26, 41, 45, 60, 100, 180];
+const LEFT_QUICK = QUICK_SCORES.slice(0, 3);    // 26, 41, 45 — flank the left side of the keypad
+const RIGHT_QUICK = QUICK_SCORES.slice(3);      // 60, 100, 180 — flank the right side
 
 const S = {
   store: null,
@@ -427,13 +429,17 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
 
   const turns = sd.turns.map((t, i) => {
     const cls = [t.finish ? 'fin' : '', t.bust ? 'bust' : '', R.maxShots.includes(t.s) ? 'max' : (t.s >= ton(t.p) ? 'ton' : '')].join(' ');
-    const inner = `<span class="who">${esc(firstName(t.p))}</span><b>${t.s}</b>`;
+    const inner = `<span class="turn-num">${i + 1}</span><span class="turn-who">${esc(firstName(t.p))}</span><b class="turn-score">${t.s}</b>`;
     return mine
-      ? `<button class="tchip ${cls}" data-act="edit" data-side="${side}" data-i="${i}">${inner}</button>`
-      : `<span class="tchip ${cls}">${inner}</span>`;          // the other team's turns are read-only here
+      ? `<button class="turn-row ${cls}" data-act="edit" data-side="${side}" data-i="${i}">${inner}</button>`
+      : `<div class="turn-row ${cls}">${inner}</div>`;          // the other team's turns are read-only here
   }).join('');
 
-  const numCls = sd.finished ? 'done' : (sd.remaining < R.underThreshold ? 'under' : '');
+  // While this side is the one entering a score, show what Remaining WOULD become if submitted right
+  // now — updates live as they type, and settles back to the real value once they submit or clear it.
+  const previewTotal = chipsLive ? totalOf(S.entry) : null;
+  const liveRemaining = previewTotal === null ? sd.remaining : sd.remaining - previewTotal;
+  const numCls = liveRemaining === 0 ? 'done' : (liveRemaining < R.underThreshold ? 'under' : '');
 
   return `
     <section class="team ${side === 'B' ? 'b' : ''} ${active ? 'active' : ''} ${role === side ? 'mine' : ''} panel-${side.toLowerCase()}">
@@ -443,8 +449,8 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
         <div class="mpts">${fmtPoints(pts)}<small>MATCH PTS</small></div>
       </div>
       <div class="remaining">
-        <div class="lbl">Remaining</div>
-        <div class="num ${numCls}">${sd.remaining}</div>
+        <div class="lbl">Remaining${previewTotal !== null ? ' (if entered)' : ''}</div>
+        <div class="num ${numCls}">${liveRemaining}</div>
       </div>
       <div class="tags">${tags}</div>
       <div class="pchips">${chips}</div>
@@ -521,19 +527,30 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
     <div class="pchips phone-only">${t.lineup.map((id) => `<button class="pchip ${id === t.pid ? 'sel' : ''}" data-act="pick" data-p="${esc(id)}">${esc(shortOf(id))}</button>`).join('')}</div>
     <div class="entry-box">
       <div class="who">${who}</div>
-      ${S.entry.includes('+') ? `<div class="calc-expr">${esc(S.entry.split('+').join(' + '))}</div>` : ''}
-      <div class="val ${S.entry === '' ? 'empty' : ''}" id="entry-val">${entryTotalDisplay()}</div>
+      <div class="entry-row">
+        <button class="btn small ghost" data-act="undo" ${canUndo ? '' : 'disabled'}>Undo</button>
+        <div class="val ${S.entry === '' ? 'empty' : ''}" id="entry-val">${entryTotalDisplay()}</div>
+        ${S.entry === ''
+          ? '<button class="miss-enter-btn miss" data-act="miss">Miss</button>'
+          : '<button class="miss-enter-btn enter" data-act="enter">Enter</button>'}
+      </div>
+      ${(S.entry.includes('+') || S.entry.includes('x')) ? `<div class="calc-expr">${esc(S.entry.split('+').join(' + ').split('x').join(' \u00d7 '))}</div>` : ''}
     </div>
-    <div class="quick">${QUICK_SCORES.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}</div>
-    <div class="keys">
-      ${[7, 8, 9, 4, 5, 6, 1, 2, 3].map((d) => `<button data-act="key" data-k="${d}">${d}</button>`).join('')}
-      <button class="back" data-act="key" data-k="back" aria-label="Backspace">⌫</button>
-      <button data-act="key" data-k="0">0</button>
-      <button class="plus" data-act="key" data-k="plus" aria-label="Add another dart">+</button>
+    <div class="keypad-flanked">
+      <div class="flank">
+        ${LEFT_QUICK.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}
+        <button class="flank-back" data-act="key" data-k="back" aria-label="Backspace">⌫</button>
+      </div>
+      <div class="keys">
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => `<button data-act="key" data-k="${d}">${d}</button>`).join('')}
+        <button class="times" data-act="key" data-k="times" aria-label="Multiply (e.g. 20 for treble 20)">\u00d7</button>
+        <button data-act="key" data-k="0">0</button>
+        <button class="plus" data-act="key" data-k="plus" aria-label="Add another dart">+</button>
+      </div>
+      <div class="flank">${RIGHT_QUICK.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}</div>
     </div>
-    <button class="enter-big" data-act="enter">Enter ✓</button>
     ${starterRow}
-    <div class="pad-actions">${undoBtn}${turnsBtn}${moreBtn}</div>
+    <div class="pad-actions">${turnsBtn}${moreBtn}</div>
   </section>`;
 }
 
@@ -609,17 +626,26 @@ function entryContext() {
   return { m, R, ms, n, leg, st, role, thrower };
 }
 
-/** Turns "57+3+19" (or a plain "79") into 79. Returns null for an empty/incomplete entry. */
+/** Value of one "+"-separated segment: a plain number, or "value x multiplier" (e.g. "20x3" = 60). */
+function segmentValue(seg) {
+  if (seg.includes('x')) {
+    const [v, n] = seg.split('x');
+    return (parseInt(v, 10) || 0) * (parseInt(n, 10) || 0);
+  }
+  return parseInt(seg, 10) || 0;
+}
+
+/** Turns "57+3+19" or "20x3+19" (or a plain "79") into a total. Null for an empty/incomplete entry. */
 function totalOf(str) {
-  if (str === '' || str.endsWith('+')) return null;
-  return str.split('+').reduce((sum, seg) => sum + (parseInt(seg, 10) || 0), 0);
+  if (str === '' || str.endsWith('+') || str.endsWith('x')) return null;
+  return str.split('+').reduce((sum, seg) => sum + segmentValue(seg), 0);
 }
 
 /** What the big number in the entry box should show right now. */
 function entryTotalDisplay() {
   if (S.entry === '') return '0';
   const t = totalOf(S.entry);
-  return t === null ? esc(S.entry) : t;   // still typing after a trailing "+": show the raw string, not a wrong total
+  return t === null ? esc(S.entry.split('x').join(' \u00d7 ')) : t;   // still typing: show the raw string, not a wrong total
 }
 
 function updateEntryDisplay() {
@@ -635,26 +661,41 @@ function press(k) {
   if (k === 'back') {
     S.entry = S.entry.slice(0, -1);
   } else if (k === 'plus') {
-    // Calculator entry: "57+3+19" adds up to a single turn total, one number per dart.
-    // A "+" only makes sense once something's typed, and never twice in a row.
-    if (!S.entry || S.entry.endsWith('+')) return;
+    // Calculator entry: "57+3+19" (or "20x3+19") adds up to a single turn total, one dart per "+".
+    if (!S.entry || S.entry.endsWith('+') || S.entry.endsWith('x')) return;
     S.entry += '+';
+  } else if (k === 'times') {
+    // "20x3" = treble 20 (value × multiplier). Only makes sense within one dart's own segment.
+    if (!S.entry || S.entry.endsWith('+') || S.entry.endsWith('x')) return;
+    const lastPlus = S.entry.lastIndexOf('+');
+    const seg = S.entry.slice(lastPlus + 1);
+    if (seg.includes('x')) return;   // one "×" per dart
+    S.entry += 'x';
   } else if (/^\d$/.test(k)) {
     const hasPlus = S.entry.includes('+');
     const lastPlus = S.entry.lastIndexOf('+');
     const before = hasPlus ? S.entry.slice(0, lastPlus + 1) : '';
     const seg = hasPlus ? S.entry.slice(lastPlus + 1) : S.entry;
-    // Before any "+": typing a normal 3-dart total (max 180). After a "+": typing one dart's
-    // value in a running sum (max 60 — the highest any single dart can score, treble 20).
-    const maxLen = hasPlus ? 2 : 3;
-    const maxVal = hasPlus ? 60 : 180;
-    const nextSeg = (seg === '0' ? '' : seg) + k;
-    if (nextSeg.length > maxLen) return;
-    if (parseInt(nextSeg, 10) > maxVal) {
-      toast(hasPlus ? 'A single dart can score at most 60' : 'The highest possible score is 180', 'error');
-      return;
+
+    if (seg.includes('x')) {
+      // Typing the multiplier half of "value x multiplier" — always 1 digit (single/double/treble).
+      const lastX = seg.lastIndexOf('x');
+      const val = seg.slice(0, lastX);
+      const mult = seg.slice(lastX + 1);
+      if (mult.length >= 1) return;
+      S.entry = before + val + 'x' + mult + k;
+    } else {
+      // Before any "+": a normal 3-dart total (max 180). After a "+": one dart's value (max 60).
+      const maxLen = hasPlus ? 2 : 3;
+      const maxVal = hasPlus ? 60 : 180;
+      const nextSeg = (seg === '0' ? '' : seg) + k;
+      if (nextSeg.length > maxLen) return;
+      if (parseInt(nextSeg, 10) > maxVal) {
+        toast(hasPlus ? 'A single dart can score at most 60' : 'The highest possible score is 180', 'error');
+        return;
+      }
+      S.entry = before + nextSeg;
     }
-    S.entry = before + nextSeg;
   }
   updateEntryDisplay();
 }
@@ -1008,6 +1049,7 @@ document.addEventListener('click', async (e) => {
     case 'leg': S.viewLeg = parseInt(el.dataset.n, 10); S.entry = ''; S.override = null; return render();
     case 'key': return press(el.dataset.k);
     case 'quick': S.entry = el.dataset.v; return updateEntryDisplay();
+    case 'miss': S.entry = '0'; return enterScore();
     case 'enter': return enterScore();
     case 'undo': return undoLast();
     case 'pick': S.override = el.dataset.p; return render();
@@ -1128,6 +1170,7 @@ document.addEventListener('keydown', (e) => {
   if (/^[0-9]$/.test(e.key)) press(e.key);
   else if (e.key === 'Backspace') { e.preventDefault(); press('back'); }
   else if (e.key === '+') { e.preventDefault(); press('plus'); }
+  else if (e.key === '*' || e.key === 'x' || e.key === 'X') { e.preventDefault(); press('times'); }
   else if (e.key === 'Enter') { e.preventDefault(); enterScore(); }
 });
 
