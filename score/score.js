@@ -373,7 +373,9 @@ function matchView(m) {
     left: '<button class="btn small ghost" data-act="back">‹ Matches</button>',
     title: `Match ${matchNo(m)}<small>${esc(tt(m.teamA))} v ${esc(tt(m.teamB))}${S.night && S.night.week ? ` · Week ${esc(S.night.week)}` : ''}</small>`,
     mid: `<div class="legbar">${legChips}</div>`,
-    right: (m.status === 'final' ? `<button class="btn small" data-act="stats" data-id="${esc(m.id)}">Stats</button>` : '') + syncHtml(),
+    right: (m.status === 'final' ? `<button class="btn small" data-act="stats" data-id="${esc(m.id)}">Stats</button>` : '')
+      + `<button class="icon-btn" data-act="more" title="Settings" aria-label="Settings">${SETTINGS_ICON}</button>`
+      + syncHtml(),
   });
 
   return bar + `<div class="match-grid">
@@ -466,7 +468,6 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
   const myShots = role === 'both' ? st.A.shots + st.B.shots : st[role].shots;
   const canUndo = myShots > 0;
   const undoBtn = `<button class="btn" data-act="undo" ${canUndo ? '' : 'disabled'}>↶ Undo<span class="long"> last turn</span></button>`;
-  const moreBtn = `<button class="icon-btn" data-act="more" title="Settings" aria-label="Settings">${SETTINGS_ICON}</button>`;
   const turnsBtn = '<button class="btn phone-only" data-act="turns">Turns</button>';
   const t = currentThrower(m, n, leg, st, role);
 
@@ -498,7 +499,7 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
         ${matchLine}
         ${action}
       </div>
-      <div class="pad-actions">${undoBtn}${turnsBtn}${moreBtn}</div>
+      <div class="pad-actions">${undoBtn}${turnsBtn}</div>
     </section>`;
   }
 
@@ -552,7 +553,7 @@ function padPanel(m, n, leg, st, ms, R, role = 'both') {
       </div>
       <div class="flank">${RIGHT_QUICK.map((q) => `<button data-act="quick" data-v="${q}">${q}</button>`).join('')}</div>
     </div>
-    <div class="pad-actions">${turnsBtn}${moreBtn}</div>
+    <div class="pad-actions">${turnsBtn}</div>
   </section>`;
 }
 
