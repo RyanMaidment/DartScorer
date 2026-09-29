@@ -343,7 +343,6 @@ select.sel, input.txt {
 .flank { flex: none; width: 62px; display: flex; flex-direction: column; gap: 6px; }
 .flank button { flex: 1; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--brass); }
 .flank button:active { background: rgba(255,201,51,0.35); }
-.flank-back { color: var(--chalk-dim) !important; font-size: 20px !important; }
 .keys { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 8px; }
 .keys button {
   min-height: 58px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2);
@@ -351,8 +350,14 @@ select.sel, input.txt {
 }
 .keys button:active, .flank button:active { background: rgba(255,201,51,0.35); }
 .keys .plus, .keys .times { color: var(--brass); font-size: 34px; }
-.pad-actions { display: flex; gap: 8px; }
+.quick-bottom { font-family: var(--font-mono); font-weight: 700; font-size: 22px; color: var(--brass); }
+.pad-actions { display: flex; gap: 8px; align-items: stretch; }
 .pad-actions .btn { flex: 1; }
+.icon-btn {
+  flex: none; width: 48px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--chalk-dim); display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:active { background: rgba(255,255,255,0.15); }
 .starter-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--chalk-dim); letter-spacing: 0.06em; text-transform: uppercase; }
 .starter-row .seg button { min-height: 34px; padding: 4px 12px; font-size: 13px; }
 
