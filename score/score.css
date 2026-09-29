@@ -299,7 +299,20 @@ select.sel, input.txt {
 .pchip.static { opacity: 0.6; pointer-events: none; }
 
 .turns-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--chalk-dim); margin-top: 2px; display: flex; justify-content: space-between; align-items: center; }
-.turns { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; overflow-y: auto; min-height: 0; flex: 1; }
+.turns { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; min-height: 0; flex: 1; }
+.turn-row {
+  border: 1px solid var(--line); background: rgba(0,0,0,0.22); border-radius: 6px; padding: 5px 10px;
+  display: flex; align-items: center; gap: 10px; font-size: 14px; width: 100%; text-align: left;
+}
+.turn-num { font-family: var(--font-mono); color: var(--chalk-dim); font-size: 12px; width: 1.4em; flex: none; }
+.turn-who { color: var(--chalk-dim); font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.turn-score { font-family: var(--font-mono); font-size: 18px; flex: none; }
+.turn-row.ton .turn-score { color: var(--brass); }
+.turn-row.max .turn-score { color: var(--win); }
+.turn-row.bust .turn-score { color: var(--lose); text-decoration: line-through; }
+.turn-row.fin { border-color: var(--win); background: rgba(43,239,154,0.15); }
+
+/* Used by the phone "Turns" bottom-sheet modal (openTurns()) — a separate, compact chip view. */
 .tchip { border: 1px solid var(--line); background: rgba(0,0,0,0.28); border-radius: 8px; padding: 6px 9px; font-size: 14px; min-height: 40px; display: inline-flex; gap: 6px; align-items: baseline; }
 .tchip b { font-family: var(--font-mono); font-size: 17px; }
 .tchip.ton b { color: var(--brass); }
@@ -316,18 +329,28 @@ select.sel, input.txt {
 }
 .entry-box .who { font-size: 13px; color: var(--chalk-dim); letter-spacing: 0.06em; text-transform: uppercase; }
 .entry-box .who b { color: var(--chalk); }
-.entry-box .val { font-family: var(--font-mono); font-weight: 700; font-size: 54px; line-height: 1.1; min-height: 60px; }
-.entry-box .val.empty { color: rgba(255,255,255,0.25); }
-.quick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.quick button { min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-family: var(--font-mono); font-weight: 700; font-size: 16px; }
+.entry-row { display: flex; align-items: stretch; gap: 8px; margin-top: 4px; }
+.entry-row .val { flex: 1; font-family: var(--font-mono); font-weight: 700; font-size: 44px; line-height: 1.1; min-height: 52px; display: flex; align-items: center; justify-content: center; }
+.entry-row .val.empty { color: rgba(255,255,255,0.25); }
+.entry-row .btn.small { flex: none; align-self: center; }
+.entry-box .calc-expr { font-family: var(--font-mono); font-size: 15px; color: var(--brass); letter-spacing: 0.02em; margin-top: 2px; }
+.miss-enter-btn { flex: none; min-width: 92px; border-radius: 10px; border: 1px solid var(--line); font-weight: 800; font-size: 16px; text-transform: uppercase; letter-spacing: 0.04em; }
+.miss-enter-btn.miss { background: rgba(255,77,109,0.15); border-color: var(--lose); color: var(--lose); }
+.miss-enter-btn.miss:active { background: rgba(255,77,109,0.35); }
+.miss-enter-btn.enter { background: var(--win); border-color: var(--win); color: #002a18; }
+.miss-enter-btn.enter:active { transform: scale(0.98); }
+.keypad-flanked { flex: 1; min-height: 0; display: flex; gap: 8px; }
+.flank { flex: none; width: 62px; display: flex; flex-direction: column; gap: 6px; }
+.flank button { flex: 1; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-family: var(--font-mono); font-weight: 700; font-size: 15px; color: var(--brass); }
+.flank button:active { background: rgba(255,201,51,0.35); }
+.flank-back { color: var(--chalk-dim) !important; font-size: 20px !important; }
 .keys { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 8px; }
 .keys button {
   min-height: 58px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2);
   font-family: var(--font-mono); font-weight: 700; font-size: 30px;
 }
-.keys button:active, .quick button:active { background: rgba(255,201,51,0.35); }
-.keys .enter { background: var(--win); color: #002a18; border-color: var(--win); font-family: var(--font-body); font-size: 20px; font-weight: 800; }
-.keys .back { font-size: 26px; }
+.keys button:active, .flank button:active { background: rgba(255,201,51,0.35); }
+.keys .plus, .keys .times { color: var(--brass); font-size: 34px; }
 .pad-actions { display: flex; gap: 8px; }
 .pad-actions .btn { flex: 1; }
 .starter-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--chalk-dim); letter-spacing: 0.06em; text-transform: uppercase; }
@@ -442,12 +465,12 @@ dialog#modal label { display: block; font-size: 12px; letter-spacing: 0.08em; te
   .pchips.phone-only .pchip { min-height: 40px; font-size: 14px; padding: 2px 4px; }
   .entry-box { padding: 4px 10px; border-radius: 10px; }
   .entry-box .who { font-size: 12px; }
-  .entry-box .val { font-size: 38px; min-height: 44px; line-height: 1.15; }
-  .quick { gap: 5px; }
-  .quick button { min-height: 38px; font-size: 15px; }
+  .entry-row .val { font-size: 30px; min-height: 40px; }
+  .miss-enter-btn { min-width: 70px; min-height: 40px; font-size: 13px; }
+  .flank { width: 50px; gap: 5px; }
+  .flank button { font-size: 13px; }
   .keys { grid-auto-rows: minmax(40px, 1fr); gap: 6px; min-height: 178px; flex: 1 0 auto; }
   .keys button { min-height: 0; height: 100%; font-size: 24px; border-radius: 10px; }
-  .keys .enter { font-size: 18px; }
   .pad-actions { gap: 6px; }
   .pad-actions .btn { min-height: 44px; padding: 6px 4px; font-size: 14px; }
   .pad-actions .long { display: none; }
@@ -490,12 +513,13 @@ dialog#modal label { display: block; font-size: 12px; letter-spacing: 0.08em; te
   .setup h2 { font-size: 24px; }
 }
 
-/* short phones (e.g. iPhone SE): drop the quick-score row to keep the keys big */
+/* short phones (e.g. iPhone SE): drop the flanking quick-scores to keep the keys big */
 @media (max-width: 600px) and (max-height: 700px) {
-  .quick { display: none; }
+  .flank { display: none; }
   .remaining .num { font-size: 44px; }
   .entry-box .who { display: none; }               /* the highlighted player chip already says who's up */
-  .entry-box .val { min-height: 40px; font-size: 34px; }
+  .entry-row .val { min-height: 36px; font-size: 26px; }
+  .miss-enter-btn { min-width: 60px; font-size: 12px; }
   .legchip { height: 30px; }
   .topbar { min-height: 44px; }
   .tags { min-height: 18px; }
@@ -516,10 +540,11 @@ dialog#modal label { display: block; font-size: 12px; letter-spacing: 0.08em; te
   }
   .team-head .names { display: none; }
   .remaining .num { font-size: 46px; }
-  .quick { display: none; }
+  .flank { display: none; }
   .keys { grid-auto-rows: minmax(28px, 1fr); min-height: 120px; }
+  .miss-enter-btn { min-width: 56px; min-height: 30px; font-size: 12px; }
   .entry-box .who { display: none; }
-  .entry-box .val { font-size: 28px; min-height: 32px; }
+  .entry-row .val { font-size: 22px; min-height: 28px; }
   .pad { gap: 4px; }
   .match-grid { padding-top: 6px; padding-bottom: 6px; }
   .pchips.phone-only .pchip { min-height: 30px; font-size: 13px; }
