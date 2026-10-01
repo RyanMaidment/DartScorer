@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leg-by-leg scores</title>
+<style>
+  /* Printed on letter/A4 landscape; each week starts on a new page. */
+  @page { size: landscape; margin: 0.4in; }
+  :root {
+    --ink: #1f2933; --muted: #6b7280; --line: #d6dce4; --soft: #f4f6f9;
+    --navy: #14213d; --gold: #fca311;
+    --a: #1f4e79; --a-soft: #e8eff8; --b: #7a2e5a; --b-soft: #f7ecf2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #e9edf2; color: var(--ink); font: 13px/1.35 Arial, Helvetica, sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* ---- screen-only toolbar ---- */
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: end;
+    padding: 12px 16px; background: var(--navy); color: #fff; }
+  .toolbar[hidden] { display: none; }
+  .toolbar label { display: grid; gap: 3px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #cbd5e1; }
+  .toolbar select { font-size: 15px; padding: 7px 8px; border-radius: 6px; border: 0; min-width: 210px; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .tip { font-size: 12px; color: #cbd5e1; max-width: 340px; }
+  .btn { font: 600 14px Arial, sans-serif; padding: 9px 14px; border-radius: 6px; border: 1px solid #c3ccd6; background: #fff; color: var(--navy); cursor: pointer; }
+  .btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1200; }
+
+  /* ---- login box (lib/auth-gate.js) + messages ---- */
+  .center { max-width: 360px; margin: 80px auto; padding: 24px; background: #fff; border-radius: 10px; text-align: center; }
+  .center input[type=password] { font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; }
+  .hint, .loading { color: var(--muted); }
+  .loading { text-align: center; padding: 60px; font-size: 16px; }
+  .msg.err { color: #b42318; margin-top: 8px; min-height: 1em; }
+  .empty { max-width: 560px; margin: 60px auto; padding: 24px; background: #fff; border-radius: 10px; }
+
+  /* ---- the sheets ---- */
+  #sheets { padding: 16px; }
+  .week { background: #fff; max-width: 1100px; margin: 0 auto 18px; padding: 18px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .week-head { border-bottom: 3px solid var(--navy); padding-bottom: 6px; margin-bottom: 10px; }
+  .week-head .league { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .week-head h2 { margin: 2px 0 6px; font-size: 22px; color: var(--navy); }
+  .week-head h2 span { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 10.5px; color: var(--muted); }
+  .week-foot { margin-top: 8px; font-size: 9.5px; font-style: italic; color: var(--muted); }
+
+  .match { margin: 8px 0 0; break-inside: avoid; page-break-inside: avoid; }
+  .match-head { display: flex; align-items: baseline; gap: 10px; padding: 3px 8px; background: var(--navy); color: #fff; border-radius: 5px 5px 0 0; }
+  .match-head .mno { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+  .match-head .team-a, .match-head .team-b { font-weight: 700; font-size: 14px; }
+  .match-head .score { font: 700 15px "Courier New", monospace; background: rgba(255,255,255,.12); padding: 1px 8px; border-radius: 4px; }
+  .match-head .score i { font-style: normal; color: var(--gold); }
+  .match-head .status { margin-left: auto; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; }
+  .match-head .status.final { background: #2e6b3f; }
+  .match-head .status.live { background: #9c6500; }
+
+  table.sheet { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; border: 1px solid var(--line); border-top: 0; }
+  col.c-who { width: 138px; } col.c-avg { width: 42px; }
+  table.sheet th, table.sheet td { border: 1px solid var(--line); padding: 1px 4px; vertical-align: top; }
+  thead th { background: var(--soft); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--navy); text-align: center; }
+  thead th.who { text-align: left; }
+  thead th small { display: block; font-size: 9px; text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td.who { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td.who em { font-weight: 400; font-size: 9.5px; color: var(--muted); }
+  td.avg { text-align: center; font-variant-numeric: tabular-nums; }
+  td.turns { line-height: 1.45; letter-spacing: -0.1px; }
+
+  tr.side-head th { text-align: left; font-size: 11.5px; padding: 2px 6px; }
+  tr.side-head th b { float: right; }
+  tr.side-head th small { color: var(--muted); font-weight: 400; }
+  .side-a tr.side-head th { background: var(--a-soft); color: var(--a); border-left: 4px solid var(--a); }
+  .side-b tr.side-head th { background: var(--b-soft); color: var(--b); border-left: 4px solid var(--b); }
+  .side-a td.who { border-left: 4px solid var(--a); }
+  .side-b td.who { border-left: 4px solid var(--b); }
+  tr.result td { background: #fafbfc; font-size: 10px; white-space: nowrap; overflow: hidden; }
+  tr.result td.who { font-weight: 400; color: var(--muted); font-style: italic; }
+  td.res .won { color: #2e6b3f; }
+  td.res .left { color: var(--muted); }
+  td.res .u { color: #9c6500; }
+  td.res .pts { color: var(--muted); }
+  td.res .pts.got { color: var(--ink); font-weight: 700; }
+  .none { color: #b0b8c2; }
+
+  /* one turn */
+  i.t { font-style: normal; display: inline-block; min-width: 0; padding: 0 2px; margin-right: 1px; border-radius: 3px; text-align: center; font-variant-numeric: tabular-nums; }
+  i.t.ton { font-weight: 700; }
+  i.t.max { font-weight: 700; background: #fcebc2; color: #7a4f00; }
+  i.t.fin { font-weight: 700; background: #dcefe1; color: #1e5b33; outline: 1px solid #2e6b3f; }
+  i.t.bust { font-size: 9.5px; color: #b42318; text-decoration: line-through; }
+
+  @media print {
+    html, body { background: #fff; font-size: 11px; }
+    .toolbar { display: none !important; }
+    #sheets { padding: 0; }
+    .week { max-width: none; margin: 0; padding: 0; box-shadow: none; border-radius: 0; break-before: page; page-break-before: always; }
+    .week.first { break-before: auto; page-break-before: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar" hidden>
+  <label>Week <select id="pick-night"></select></label>
+  <label>Team <select id="pick-team"></select></label>
+  <button class="btn primary" id="print">Print / Save PDF</button>
+  <button class="btn" id="csv">Download turns (CSV)</button>
+  <span class="spacer"></span>
+  <span class="tip">To save a file: <b>Print / Save PDF</b>, then choose <b>Save as PDF</b> as the printer (landscape).</span>
+</div>
+<div id="sheets"><p class="loading">Loading…</p></div>
+<script type="module" src="legsheet.js"></script>
+</body>
+</html>
