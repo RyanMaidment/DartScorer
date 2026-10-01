@@ -457,6 +457,8 @@ function statsTab() {
         <button class="btn" data-act="csv-night" ${night ? '' : 'disabled'}>Download this night (CSV)</button>
         <button class="btn" data-act="csv-season" ${S.weekly.length ? '' : 'disabled'}>Download whole season (CSV)</button>
         <button class="btn" data-act="build-report" ${night && S.weekly.length && S.report.state !== 'building' ? '' : 'disabled'}>Build report (Excel + PDF)</button>
+        <a class="btn" target="_blank" rel="noopener"
+           href="legsheet.html?${S.kind === 'demo' ? 'demo&' : ''}${night ? `night=${encodeURIComponent(night.id)}` : ''}">Leg-by-leg score sheets (printable)</a>
       </div>
       ${reportPanel()}
       ${preview}
