@@ -8,9 +8,10 @@
 import { createStore } from '../lib/store.js';
 import { withRules, DEFAULT_RULES, shortName, slug, fmtPoints, matchResults, pointsPerMatch } from '../lib/engine.js';
 import { teamNumbers, teamLabel, customTeamName, todayISO } from '../lib/night.js';
-import { weeklyRows, toCsv } from '../lib/export.js';
+import { weeklyRows, toCsv, avgParts } from '../lib/export.js';
 import { SEED_PLAYERS } from '../lib/seed-data.js';
 import { requestReport, reportDownloads, revokeDownloads } from '../lib/report.js';
+import { requireAdminLogin, mountSignOutButton } from '../lib/auth-gate.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -35,10 +36,13 @@ let started = false, unsubStats = null;
 boot();
 
 async function boot() {
+  // Password screen (ADMIN_PASSWORD in lib/config.js). Each browser remembers the unlock until "Sign out".
+  await requireAdminLogin($('#app'));
+  mountSignOutButton();
   try { S.store = await createStore(); }
   catch (err) { $('#app').innerHTML = `<div class="center"><h2>Couldn't start</h2>${esc(err.message || err)}</div>`; return; }
   S.kind = S.store.kind;
-  S.auth = { ready: true, signedIn: true, role: 'admin' };   // no login: the page is open
+  S.auth = { ready: true, signedIn: true, role: 'admin' };   // signed in via the password screen above
   start();
   render(true);
 }
@@ -420,11 +424,15 @@ function statsTab() {
       const p = perPlayer.get(r.player) || {
         player: r.player, gender: r.gender, spare: r.spare, team: r.team,
         nights: 0, games: 0, points: 0, shots: 0, finishes: 0, highShot: 0, highFinish: 0, tons: 0, maxes: 0,
+        avgPts: 0, avgShots: 0,   // points/turns that count toward Average (see the under-100 rule)
       };
       p.nights += 1;
       p.games += r.games || 0;
       p.points += r.points || 0;
       p.shots += r.shots || 0;
+      const a = avgParts(r);
+      p.avgPts += a.points;
+      p.avgShots += a.shots;
       p.finishes += r.finishes || 0;
       p.highShot = Math.max(p.highShot, r.highShot || 0);
       p.highFinish = Math.max(p.highFinish, r.highFinish || 0);
@@ -435,7 +443,7 @@ function statsTab() {
     }
   }
   const playerStandings = [...perPlayer.values()]
-    .map((p) => ({ ...p, average: p.shots ? p.points / p.shots : null }))
+    .map((p) => ({ ...p, average: p.avgShots ? p.avgPts / p.avgShots : null }))
     .sort((a, b) => (b.average ?? -1) - (a.average ?? -1));
 
   return `
