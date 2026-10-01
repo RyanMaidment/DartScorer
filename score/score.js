@@ -12,6 +12,11 @@ import {
   classifyEntry, replaySide, fmtPoints, legOwed, playerStats,
 } from '../lib/engine.js';
 import { teamLabel, lineupChoices, customTeamName, teamTitle } from '../lib/night.js';
+import * as CONFIG from '../lib/config.js';
+
+// Password for going back to an earlier leg: LEG_PASSWORD from lib/config.js if it's set there,
+// otherwise the admin password. (Imported this way so the scorer still loads if config.js has neither.)
+const LEG_PASSWORD = CONFIG.LEG_PASSWORD || CONFIG.ADMIN_PASSWORD || '';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -364,15 +369,10 @@ function matchView(m) {
   const leg = (m.legs && m.legs[n]) || { a: [], b: [] };
   const st = legState(leg, starterFor(m, n), R);
 
-  const legChips = ms.legs.map((l) => {
-    const cls = [l.state.winner === 'A' ? 'wa' : l.state.winner === 'B' ? 'wb' : '', l.n === n ? 'cur' : ''].join(' ');
-    return `<button class="legchip ${cls}" data-act="leg" data-n="${l.n}" aria-label="Leg ${l.n}">${l.n}</button>`;
-  }).join('');
-
+  // Changing legs lives in Settings (gear) ▸ Go to leg; going back to an earlier leg needs LEG_PASSWORD.
   const bar = topbar({
     left: '<button class="btn small ghost" data-act="back">‹ Matches</button>',
-    title: `Match ${matchNo(m)}<small>${esc(tt(m.teamA))} v ${esc(tt(m.teamB))}${S.night && S.night.week ? ` · Week ${esc(S.night.week)}` : ''}</small>`,
-    mid: `<div class="legbar">${legChips}</div>`,
+    title: `Match ${matchNo(m)} · Leg ${n} of ${R.legsPerMatch}<small>${esc(tt(m.teamA))} v ${esc(tt(m.teamB))}${S.night && S.night.week ? ` · Week ${esc(S.night.week)}` : ''}</small>`,
     right: (m.status === 'final' ? `<button class="btn small" data-act="stats" data-id="${esc(m.id)}">Stats</button>` : '')
       + `<button class="icon-btn" data-act="more" title="Settings" aria-label="Settings">${SETTINGS_ICON}</button>`
       + syncHtml(),
@@ -1020,9 +1020,14 @@ function openMore() {
           <button class="${starter === 'B' ? 'on b' : ''}" data-act="set-starter" data-side="B">${esc(tt(m.teamB))}</button>
         </div></div>` : '';
   showModal(`
-    <h3>More</h3>
+    <h3>Settings</h3>
     <p>Match ${matchNo(m)} · ${esc(tt(m.teamA))} v ${esc(tt(m.teamB))}</p>
     <div style="display:grid;gap:10px">
+      <div>
+        <label for="leg-select">Go to leg</label>
+        <select class="sel" id="leg-select">${legOptions(ctx)}</select>
+        <p class="hint" style="margin:6px 0 0">Going back to an earlier leg needs the password.</p>
+      </div>
       ${starterBlock}
       <button class="btn" data-mact="team-names">Team names…</button>
       <button class="btn" data-mact="scoring-mode">Scoring mode: ${ctx.role === 'both' ? 'both teams' : esc(tt(ctx.role === 'A' ? m.teamA : m.teamB)) + ' only'}…</button>
@@ -1031,6 +1036,57 @@ function openMore() {
       <button class="btn danger" data-mact="clear-match">Clear ALL scores for this match</button>
       <button class="btn" data-mact="no">Close</button>
     </div>`);
+}
+
+/** "Leg 2 — Team 9 won", "Leg 4 — in progress", … for the Go to leg dropdown. */
+function legOptions(ctx) {
+  const { m, ms, n } = ctx;
+  return ms.legs.map((l) => {
+    const s = l.state;
+    const status = s.over ? `${tt(s.winner === 'A' ? m.teamA : m.teamB)} won` : l.started ? 'in progress' : 'not started';
+    return `<option value="${l.n}"${l.n === n ? ' selected' : ''}>Leg ${l.n} — ${esc(status)}</option>`;
+  }).join('');
+}
+
+function legPasswordModal(target) {
+  return new Promise((resolve) => {
+    modalResolve = resolve;
+    showModal(`
+      <h3>Go back to leg ${target}?</h3>
+      <p>Earlier legs are locked so finished scores don't get changed by accident. Enter the password to open leg ${target}.</p>
+      <input type="password" id="leg-pass" class="txt" autocomplete="off" placeholder="Password">
+      <div class="error-text" id="leg-pass-err"></div>
+      <div class="row">
+        <button class="btn" data-mact="no">Cancel</button>
+        <button class="btn good" data-mact="leg-pass-ok">Unlock</button>
+      </div>`);
+    setTimeout(() => { const el = $('#leg-pass'); if (el) el.focus(); }, 50);
+  });
+}
+
+function checkLegPassword() {
+  const el = $('#leg-pass');
+  if (!el) return;
+  if (LEG_PASSWORD && el.value === LEG_PASSWORD) { closeModal(true); return; }
+  $('#leg-pass-err').textContent = 'Wrong password.';
+  el.value = '';
+  el.focus();
+}
+
+/** Forward: straight there. Back to an earlier leg: password first. */
+async function goToLeg(target) {
+  const ctx = entryContext();
+  if (!ctx || !target || target === ctx.n) return;
+  if (target < ctx.n && !(await legPasswordModal(target))) {
+    toast(`Stayed on leg ${ctx.n}`);
+    return;
+  }
+  S.viewLeg = target;
+  S.entry = '';
+  S.override = null;
+  closeModal(true);
+  render();
+  toast(`Now on leg ${target}`);
 }
 
 /* ================================================================== events == */
@@ -1049,7 +1105,6 @@ document.addEventListener('click', async (e) => {
     case 'stats': return go(`#/match/${el.dataset.id}/stats`);
     case 'back': return go('#/');
     case 'fullscreen': return toggleFullscreen();
-    case 'leg': S.viewLeg = parseInt(el.dataset.n, 10); S.entry = ''; S.override = null; return render();
     case 'key': return press(el.dataset.k);
     case 'quick': S.entry = el.dataset.v; return render();
     case 'miss': S.entry = '0'; return enterScore();
@@ -1146,6 +1201,7 @@ async function handleModalAction(el) {
       return;
     }
     case 'names-save': return saveTeamNamesModal();
+    case 'leg-pass-ok': return checkLegPassword();
     case 'end-match':
       if (ctx) { await S.store.setMatchFields(S.nightId, ctx.m.id, { status: 'final' }); closeModal(true); go(`#/match/${ctx.m.id}/stats`); }
       return;
@@ -1177,14 +1233,20 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'Enter') { e.preventDefault(); enterScore(); }
 });
 
-// Enter key inside the edit dialog saves
+// Enter key inside the edit dialog saves (and submits the leg password)
 $('#modal').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.id === 'leg-pass') { e.preventDefault(); checkLegPassword(); return; }
   if (e.key === 'Enter' && e.target.id === 'edit-score') {
     const save = document.querySelector('[data-mact="edit-save"]');
     if (save) saveEdit(save.dataset.side, parseInt(save.dataset.i, 10));
   }
 });
 
+
+// Settings ▸ Go to leg
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'leg-select') goToLeg(parseInt(e.target.value, 10));
+});
 
 // Remember what's typed/picked on the setup screen so a live update from the other phone can't wipe it
 document.addEventListener('change', (e) => {
