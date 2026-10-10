@@ -288,14 +288,13 @@ select.sel, input.txt {
 .team.b .tag.throw { background: var(--side-b); color: #001a2a; }
 .tag.bonus { background: rgba(255,77,109,0.2); color: var(--lose); }
 .tag.win { background: rgba(43,239,154,0.2); color: var(--win); }
-.tag.starts { background: rgba(255,255,255,0.12); color: var(--chalk); }
-/* 🚩 pinned to the team-number badge of whoever throws first this leg (visible on every screen size) */
-.team-head .tok.starts { position: relative; }
-.team-head .tok.starts::after {
-  content: '\1F6A9'; position: absolute; top: -9px; right: -9px; font-size: 16px; line-height: 1;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
+/* "Starts leg N" bubble under the team number of whoever throws first this leg */
+.tok-wrap { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.starts-bubble {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+  padding: 2px 7px; border-radius: 99px; background: var(--brass); color: #1a1200;
 }
-.start-flag { font-size: 0.9em; }
+.team.b .starts-bubble { background: var(--side-b); color: #001a2a; }
 
 .pchips { display: flex; gap: 6px; }
 .pchip {
@@ -463,6 +462,7 @@ dialog#modal label { display: block; font-size: 12px; letter-spacing: 0.08em; te
   .team { padding: 8px 10px; gap: 4px; border-radius: 10px; border-top-width: 4px; }
   .team-head { gap: 8px; }
   .team-head .tok { width: 32px; height: 32px; font-size: 14px; border-width: 2px; }
+  .starts-bubble { white-space: normal; text-align: center; width: 44px; font-size: 8px; line-height: 1.15; padding: 2px 3px; border-radius: 6px; }
   .team-head .names {
     font-size: 12px; line-height: 1.15;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;

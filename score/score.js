@@ -415,10 +415,8 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
   const pts = side === 'A' ? ms.a : ms.b;
   const ton = (id) => R.tonThreshold[P(id) && P(id).gender === 'F' ? 'F' : 'M'];
   const starts = starterFor(m, n) === side;                    // this team throws first in this leg
-  const firstUp = starts ? lineup[0] : null;                   // ...led off by the first player in the lineup
 
   const tags = [
-    starts ? `<span class="tag starts">\u{1F6A9} Starts leg ${n}</span>` : '',
     role === side ? '<span class="tag you">You</span>' : '',
     active ? '<span class="tag throw">▶ Throwing</span>' : '',
     st.under100First === side ? `<span class="tag bonus">Under ${R.underThreshold} first +${R.under100Points}</span>` : '',
@@ -427,10 +425,9 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
 
   const chips = lineup.map((id) => {
     const sel = chipsLive && id === thrower.pid;
-    const flag = id === firstUp ? '<span class="start-flag" title="Throws first this leg">\u{1F6A9}</span> ' : '';
     return chipsLive
-      ? `<button class="pchip ${sel ? 'sel' : ''}" data-act="pick" data-p="${esc(id)}">${flag}${esc(shortOf(id))}</button>`
-      : `<span class="pchip static">${flag}${esc(shortOf(id))}</span>`;
+      ? `<button class="pchip ${sel ? 'sel' : ''}" data-act="pick" data-p="${esc(id)}">${esc(shortOf(id))}</button>`
+      : `<span class="pchip static">${esc(shortOf(id))}</span>`;
   }).join('');
 
   const turns = sd.turns.map((t, i) => {
@@ -450,7 +447,10 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
   return `
     <section class="team ${side === 'B' ? 'b' : ''} ${active ? 'active' : ''} ${role === side ? 'mine' : ''} panel-${side.toLowerCase()}">
       <div class="team-head">
-        <span class="tok${starts ? ' starts' : ''}"${starts ? ` title="Starts leg ${n}"` : ''}>${esc(tn)}</span>
+        <div class="tok-wrap">
+          <span class="tok">${esc(tn)}</span>
+          ${starts ? `<span class="starts-bubble">Starts leg ${n}</span>` : ''}
+        </div>
         <div class="names${customTeamName(S.config, tn) ? ' custom' : ''}">${esc(customTeamName(S.config, tn) || lineup.map(shortOf).join(', '))}</div>
         <div class="mpts">${fmtPoints(pts)}<small>MATCH PTS</small></div>
       </div>
