@@ -414,6 +414,7 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
   const active = !st.over && st.next === side;                 // whose turn it really is (the glow)
   const pts = side === 'A' ? ms.a : ms.b;
   const ton = (id) => R.tonThreshold[P(id) && P(id).gender === 'F' ? 'F' : 'M'];
+  const starts = starterFor(m, n) === side;                    // this team throws first in this leg
 
   const tags = [
     role === side ? '<span class="tag you">You</span>' : '',
@@ -446,7 +447,10 @@ function teamPanel(m, side, n, leg, st, ms, R, role = 'both') {
   return `
     <section class="team ${side === 'B' ? 'b' : ''} ${active ? 'active' : ''} ${role === side ? 'mine' : ''} panel-${side.toLowerCase()}">
       <div class="team-head">
-        <span class="tok">${esc(tn)}</span>
+        <div class="tok-wrap">
+          <span class="tok">${esc(tn)}</span>
+          ${starts ? `<span class="starts-bubble">Starts leg ${n}</span>` : ''}
+        </div>
         <div class="names${customTeamName(S.config, tn) ? ' custom' : ''}">${esc(customTeamName(S.config, tn) || lineup.map(shortOf).join(', '))}</div>
         <div class="mpts">${fmtPoints(pts)}<small>MATCH PTS</small></div>
       </div>
