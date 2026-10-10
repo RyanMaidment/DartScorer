@@ -288,6 +288,14 @@ select.sel, input.txt {
 .team.b .tag.throw { background: var(--side-b); color: #001a2a; }
 .tag.bonus { background: rgba(255,77,109,0.2); color: var(--lose); }
 .tag.win { background: rgba(43,239,154,0.2); color: var(--win); }
+.tag.starts { background: rgba(255,255,255,0.12); color: var(--chalk); }
+/* 🚩 pinned to the team-number badge of whoever throws first this leg (visible on every screen size) */
+.team-head .tok.starts { position: relative; }
+.team-head .tok.starts::after {
+  content: '\1F6A9'; position: absolute; top: -9px; right: -9px; font-size: 16px; line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
+}
+.start-flag { font-size: 0.9em; }
 
 .pchips { display: flex; gap: 6px; }
 .pchip {
